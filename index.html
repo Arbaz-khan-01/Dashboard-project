@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dashboard Analytics</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #f4f4f4;
+      text-align: center;
+      margin: 0;
+    }
+
+    h1 {
+      background: #333;
+      color: white;
+      padding: 15px;
+    }
+
+    .stats {
+      display: flex;
+      justify-content: space-around;
+      margin: 20px;
+      flex-wrap: wrap;
+    }
+
+    .card {
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      width: 25%;
+      box-shadow: 0 0 10px gray;
+      margin: 10px;
+    }
+
+    .form-box {
+      background: white;
+      padding: 20px;
+      margin: 20px auto;
+      width: 50%;
+      border-radius: 10px;
+      box-shadow: 0 0 10px gray;
+    }
+
+    input, select, button {
+      padding: 10px;
+      margin: 10px;
+      width: 80%;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    canvas {
+      background: white;
+      margin: 20px;
+      padding: 10px;
+      border-radius: 10px;
+      width: 400px !important;
+      height: 300px !important;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Dashboard Analytics</h1>
+
+<!-- 🔷 Stats -->
+<div class="stats">
+  <div class="card">Total Users: <span id="users">0</span></div>
+  <div class="card">Completed: <span id="completed">0</span></div>
+  <div class="card">Pending: <span id="pending">0</span></div>
+</div>
+
+<!-- 🔷 Add Task Form -->
+<div class="form-box">
+  <h3>Add New Task</h3>
+  <input type="text" id="title" placeholder="Enter task title">
+  <select id="status">
+    <option value="completed">Completed</option>
+    <option value="pending">Pending</option>
+  </select>
+  <br>
+  <button onclick="addTask()">Add Task</button>
+</div>
+
+<!-- 🔷 Charts -->
+<div class="container">
+  <canvas id="barChart"></canvas>
+  <canvas id="pieChart"></canvas>
+</div>
+
+<script>
+let barChart, pieChart;
+
+// 🔷 Fetch Data from API
+async function fetchData() {
+  const res = await fetch("http://localhost:5000/api/stats");
+  const data = await res.json();
+
+  // Update Cards
+  document.getElementById("users").innerText = data.totalUsers;
+  document.getElementById("completed").innerText = data.tasksCompleted;
+  document.getElementById("pending").innerText = data.tasksPending;
+
+  // Destroy old charts (important for refresh)
+  if (barChart) barChart.destroy();
+  if (pieChart) pieChart.destroy();
+
+  // Bar Chart
+  barChart = new Chart(document.getElementById("barChart"), {
+    type: "bar",
+    data: {
+      labels: ["Users", "Completed", "Pending"],
+      datasets: [{
+        label: "Stats",
+        data: [
+          data.totalUsers,
+          data.tasksCompleted,
+          data.tasksPending
+        ],
+        backgroundColor: ["blue", "green", "red"]
+      }]
+    }
+  });
+
+  // Pie Chart
+  pieChart = new Chart(document.getElementById("pieChart"), {
+    type: "pie",
+    data: {
+      labels: ["Completed", "Pending"],
+      datasets: [{
+        data: [data.tasksCompleted, data.tasksPending],
+        backgroundColor: ["green", "red"]
+      }]
+    }
+  });
+}
+
+// 🔷 Add Task API Call
+async function addTask() {
+  const title = document.getElementById("title").value;
+  const status = document.getElementById("status").value;
+
+  if (!title) {
+    alert("Enter task title!");
+    return;
+  }
+
+  await fetch("http://localhost:5000/api/add-task", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ title, status })
+  });
+
+  alert("Task Added!");
+
+  // Clear input
+  document.getElementById("title").value = "";
+
+  // Refresh dashboard
+  fetchData();
+}
+
+// Initial Load
+fetchData();
+</script>
+
+</body>
+</html>
